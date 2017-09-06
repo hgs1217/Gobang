@@ -5,5 +5,5 @@
 
 fun main(args: Array<String>) {
     GobangFrame()
-
 }
+

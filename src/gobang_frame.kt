@@ -1,6 +1,7 @@
 import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
+import java.awt.geom.Ellipse2D
 import java.awt.geom.Rectangle2D
 import javax.swing.JFrame
 
@@ -22,6 +23,15 @@ class GobangFrame : JFrame(), MouseListener {
         val END_Y = START_Y + (SIDE_LINE - 1) * RECT_WIDTH
         val EFFECTIVE_REGION = Rectangle(START_X - RECT_WIDTH / 2, START_Y - RECT_WIDTH / 2,
                 RECT_WIDTH * SIDE_LINE, RECT_WIDTH * SIDE_LINE)
+        val CHESS_ARRAY: Array<Ellipse2D.Double> = Array(SIDE_LINE * SIDE_LINE, { index -> getEllipse(index)})
+
+        private fun getEllipse(index: Int): Ellipse2D.Double {
+            val offsetX: Int = START_X - RECT_WIDTH / 2
+            val offsetY: Int = START_Y - RECT_WIDTH / 2
+            val row: Int = index / SIDE_LINE
+            val col: Int = index % SIDE_LINE
+            return Ellipse2D.Double(offsetX.toDouble() + col * RECT_WIDTH, offsetY.toDouble() + row * RECT_WIDTH, RECT_WIDTH.toDouble(), RECT_WIDTH.toDouble())
+        }
     }
 
     init {
@@ -57,15 +67,25 @@ class GobangFrame : JFrame(), MouseListener {
             val y = START_Y + row * RECT_WIDTH - POINT_RADIUS
             g2.fillOval(x, y, 2 * POINT_RADIUS, 2 * POINT_RADIUS)
         }
+
+        for ((index, status) in GobangProcessor.boardStatus.withIndex()) {
+            when(status) {
+                true    ->  g2.fill(CHESS_ARRAY[index])
+                false   ->  g2.draw(CHESS_ARRAY[index])
+            }
+        }
     }
 
     override fun mouseClicked(e: MouseEvent?) {
+        println("$e.x  $e.y")
         if (e?.clickCount == 1 && EFFECTIVE_REGION.contains(e.x, e.y)) {
+            println(GobangProcessor.boardStatus)
             val row: Int = Math.floor((e.y - POINT_RADIUS / 2.0) / POINT_RADIUS).toInt()
             val col: Int = Math.floor((e.x - POINT_RADIUS / 2.0) / POINT_RADIUS).toInt()
             val index = row * SIDE_LINE + col
             if (GobangProcessor.boardStatus[index] == null) {
                 GobangProcessor.statusChange(index, true)
+                repaint()
             }
         }
     }
