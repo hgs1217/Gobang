@@ -2,7 +2,6 @@ import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.awt.geom.Ellipse2D
-import java.awt.geom.Rectangle2D
 import javax.swing.JFrame
 
 /**
@@ -23,14 +22,27 @@ class GobangFrame : JFrame(), MouseListener {
         val END_Y = START_Y + (SIDE_LINE - 1) * RECT_WIDTH
         val EFFECTIVE_REGION = Rectangle(START_X - RECT_WIDTH / 2, START_Y - RECT_WIDTH / 2,
                 RECT_WIDTH * SIDE_LINE, RECT_WIDTH * SIDE_LINE)
+        val SIZE_OFFSET = 5
+        val BORDER_OFFSET = 3.5
         val CHESS_ARRAY: Array<Ellipse2D.Double> = Array(SIDE_LINE * SIDE_LINE, { index -> getEllipse(index)})
+        val CHESS_BORDER_ARRAY: Array<Ellipse2D.Double> = Array(SIDE_LINE * SIDE_LINE, { index -> getEllipse(index)})
 
         private fun getEllipse(index: Int): Ellipse2D.Double {
             val offsetX: Int = START_X - RECT_WIDTH / 2
             val offsetY: Int = START_Y - RECT_WIDTH / 2
             val row: Int = index / SIDE_LINE
             val col: Int = index % SIDE_LINE
-            return Ellipse2D.Double(offsetX.toDouble() + col * RECT_WIDTH, offsetY.toDouble() + row * RECT_WIDTH, RECT_WIDTH.toDouble(), RECT_WIDTH.toDouble())
+            return Ellipse2D.Double(offsetX.toDouble() + col * RECT_WIDTH + SIZE_OFFSET, offsetY.toDouble() + row * RECT_WIDTH + SIZE_OFFSET,
+                    RECT_WIDTH.toDouble() - SIZE_OFFSET, RECT_WIDTH.toDouble() - SIZE_OFFSET)
+        }
+
+        private fun getBorderEllipse(index: Int): Ellipse2D.Double {
+            val offsetX: Int = START_X - RECT_WIDTH / 2
+            val offsetY: Int = START_Y - RECT_WIDTH / 2
+            val row: Int = index / SIDE_LINE
+            val col: Int = index % SIDE_LINE
+            return Ellipse2D.Double(offsetX.toDouble() + col * RECT_WIDTH + BORDER_OFFSET, offsetY.toDouble() + row * RECT_WIDTH + BORDER_OFFSET,
+                    RECT_WIDTH.toDouble() - BORDER_OFFSET, RECT_WIDTH.toDouble() - BORDER_OFFSET)
         }
     }
 
@@ -44,12 +56,12 @@ class GobangFrame : JFrame(), MouseListener {
         isResizable = false
         defaultCloseOperation = JFrame.EXIT_ON_CLOSE
 
-        Thread.sleep(100)
-        paintComponents(graphics)
+        paint(graphics)
+        addMouseListener(this)
     }
 
-    override fun paintComponents(g: Graphics) {
-        super.paintComponents(g)
+    override fun paint(g: Graphics) {
+        super.paint(g)
 
         val g2 = g as Graphics2D
         g2.stroke = BasicStroke(3.0f)
@@ -68,23 +80,33 @@ class GobangFrame : JFrame(), MouseListener {
             g2.fillOval(x, y, 2 * POINT_RADIUS, 2 * POINT_RADIUS)
         }
 
+        val whiteList: MutableSet<Int> = HashSet()
         for ((index, status) in GobangProcessor.boardStatus.withIndex()) {
-            when(status) {
+            when (status) {
                 true    ->  g2.fill(CHESS_ARRAY[index])
-                false   ->  g2.draw(CHESS_ARRAY[index])
+                false   ->  {
+                    g2.draw(CHESS_ARRAY[index])
+                    whiteList.add(index)
+                }
             }
+        }
+        g2.color = Color.WHITE
+        for (index in whiteList) {
+            g2.fill(CHESS_ARRAY[index])
         }
     }
 
     override fun mouseClicked(e: MouseEvent?) {
-        println("$e.x  $e.y")
         if (e?.clickCount == 1 && EFFECTIVE_REGION.contains(e.x, e.y)) {
-            println(GobangProcessor.boardStatus)
-            val row: Int = Math.floor((e.y - POINT_RADIUS / 2.0) / POINT_RADIUS).toInt()
-            val col: Int = Math.floor((e.x - POINT_RADIUS / 2.0) / POINT_RADIUS).toInt()
+            for (status in GobangProcessor.boardStatus) {
+                print("$status ")
+            }
+            val row: Int = Math.floor((e.y - RECT_WIDTH / 2.0) / RECT_WIDTH).toInt()
+            val col: Int = Math.floor((e.x - RECT_WIDTH / 2.0) / RECT_WIDTH).toInt()
             val index = row * SIDE_LINE + col
+            println("$row  $col  $index")
             if (GobangProcessor.boardStatus[index] == null) {
-                GobangProcessor.statusChange(index, true)
+                GobangProcessor.statusChange(index)
                 repaint()
             }
         }
