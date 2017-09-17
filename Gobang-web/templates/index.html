@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gobang</title>
+    <link type="text/css" rel="stylesheet" href="../static/css/index.css" />
+    <script src="../static/js/index.js" ></script>
+</head>
+<body onload="init()">
+    <div class="container">
+        <div class="title">Gobang</div>
+        <div class="version">{{version}}</div>
+        <div class="author">by: HgS_1217_</div>
+        <div class="color-title-bar">
+            <div class="color-title">Black</div>
+            <div class="color-title">White</div>
+        </div>
+        <div class="selection-bar">
+            <div class="selection-div">
+                <select class="selection" id="black-selection">
+                    <option value="Human">Human</option>
+                    <option value="AI">AI</option>
+                </select>
+            </div>
+            <div class="selection-div">
+                <select class="selection" id="white-selection">
+                    <option value="Human">Human</option>
+                    <option value="AI">AI</option>
+                </select>
+            </div>
+        </div>
+        <button class="start" onclick="start()" >START</button>
+    </div>
+</body>
+</html>

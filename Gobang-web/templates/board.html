@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gobang</title>
+    <link type="text/css" rel="stylesheet" href="../static/css/board.css" />
+    <script src="../static/js/board.js" ></script>
+    <script src="../static/js/jquery-3.2.1.min.js"></script>
+</head>
+<body onload="init()">
+    <div class="container">
+        <div class="score-bar">
+            <div class="score-name" id="p1-name"></div>
+            <div class="score" id="p1-score"></div>
+            <div class="score-colon">:</div>
+            <div class="score" id="p2-score"></div>
+            <div class="score-name" id="p2-name"></div>
+        </div>
+
+        <div class="sub-name" id="p1-sub-name"></div>
+        <div class="sub-name" id="p2-sub-name"></div>
+
+        <div class="winner" id="p1-winner" hidden>Winner!</div>
+        <div class="winner" id="p2-winner" hidden>Winner!</div>
+
+        <div class="now-bar">
+            <div class="now">Now: </div>
+            <div class="now-content" id="now-content"></div>
+        </div>
+
+        <div class="recorder-black"></div>
+        <div class="recorder-white"></div>
+
+        <div class="recorder">
+            <div class="recorder-title">Last 5 games: </div>
+            <div class="recorder-game" id="recorder-game1">
+                <div class="recorder-name" id="g1-p1-name"></div>
+                <div class="recorder-score" id="g1-p1-score"></div>
+                <div class="recorder-score" id="g1-p2-score"></div>
+                <div class="recorder-name" id="g1-p2-name"></div>
+            </div>
+            <div class="recorder-game" id="recorder-game2">
+                <div class="recorder-name" id="g2-p1-name"></div>
+                <div class="recorder-score" id="g2-p1-score"></div>
+                <div class="recorder-score" id="g2-p2-score"></div>
+                <div class="recorder-name" id="g2-p2-name"></div>
+            </div>
+            <div class="recorder-game" id="recorder-game3">
+                <div class="recorder-name" id="g3-p1-name"></div>
+                <div class="recorder-score" id="g3-p1-score"></div>
+                <div class="recorder-score" id="g3-p2-score"></div>
+                <div class="recorder-name" id="g3-p2-name"></div>
+            </div>
+            <div class="recorder-game" id="recorder-game4">
+                <div class="recorder-name" id="g4-p1-name"></div>
+                <div class="recorder-score" id="g4-p1-score"></div>
+                <div class="recorder-score" id="g4-p2-score"></div>
+                <div class="recorder-name" id="g4-p2-name"></div>
+            </div>
+            <div class="recorder-game" id="recorder-game5">
+                <div class="recorder-name" id="g5-p1-name"></div>
+                <div class="recorder-score" id="g5-p1-score"></div>
+                <div class="recorder-score" id="g5-p2-score"></div>
+                <div class="recorder-name" id="g5-p2-name"></div>
+            </div>
+        </div>
+
+        <div class="board" id="board"></div>
+        <div class="chess" id="chess" onclick="onChessClick(event)"></div>
+
+        <button class="btn" id="restart" onclick="onRestart()">RESTART</button>
+        <button class="btn" id="back" onclick="onBack()">BACK</button>
+    </div>
+</body>
+</html>

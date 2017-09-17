@@ -1,0 +1,277 @@
+
+.container {
+    height: 600px;
+    width: 1000px;
+
+    user-select: none;
+}
+
+.chess {
+    height: 480px;
+    width: 480px;
+
+    position: absolute;
+    top: 141px;
+    left: 116px;
+    z-index: 1;
+}
+
+.chess-circle {
+    height: 24px;
+    width: 24px;
+
+    margin: 4px;
+
+    border: 2px solid black;
+    border-radius: 26px;
+
+    position: absolute;
+}
+
+.board {
+    height: 450px;
+    width: 450px;
+
+    position: absolute;
+    top: 155px;
+    left: 130px;
+
+    border: 2px solid black;
+}
+
+.board-rect {
+    height: 32px;
+    width: 32px;
+
+    border: 1px solid black;
+
+    position: absolute;
+}
+
+.board-star {
+    height: 6px;
+    width: 6px;
+
+    margin: 13px;
+    background: #000;
+
+    border: 1px solid black;
+    border-radius: 7px;
+
+    position: absolute;
+}
+
+.auxi-points {
+    height: 2px;
+    width: 2px;
+
+    margin: 15px;
+    background: #f00;
+    z-index: 2;
+
+    border: 2px solid #f00;
+    border-radius: 4px;
+
+    position: absolute;
+}
+
+.score-bar {
+    height: 80px;
+    width: 600px;
+
+    position: absolute;
+    top: 25px;
+    left: 60px;
+
+    display: flex;
+    flex-direction: row;
+}
+
+.score-name {
+    height: 80px;
+    width: 200px;
+
+    text-align: center;
+    line-height: 80px;
+    font: bold 40px 'Calibri';
+}
+
+.score {
+    height: 80px;
+    width: 80px;
+
+    text-align: center;
+    line-height: 80px;
+    font: bold 40px 'Calibri';
+}
+
+.score-colon {
+    height: 80px;
+    width: 40px;
+
+    text-align: center;
+    line-height: 80px;
+    font: bold 40px 'Calibri';
+}
+
+.sub-name {
+    height: 50px;
+    width: 200px;
+
+    position: absolute;
+    top: 75px;
+
+    text-align: center;
+    line-height: 50px;
+    font: 20px 'Arial';
+}
+
+#p1-sub-name {
+    left: 60px;
+}
+
+#p2-sub-name {
+    left: 460px;
+}
+
+.winner {
+    height: 100px;
+    width: 200px;
+
+    position: absolute;
+    top: 25px;
+    
+    text-align: center;
+    line-height: 100px;
+    color: #f00;
+    font: italic 60px 'Calibri';
+}
+
+#p1-winner {
+    left: 20px;
+}
+
+#p2-winner {
+    left: 500px;
+}
+
+.now-bar {
+    height: 80px;
+    width: 320px;
+
+    position: absolute;
+    top: 150px;
+    left: 650px;
+
+    display: flex;
+    flex-direction: row;
+}
+
+.now {
+    height: 80px;
+    width: 100px;
+
+    text-align: center;
+    font: bold 40px 'Calibri';
+}
+
+.now-content {
+    height: 80px;
+    width: 220px;
+
+    text-align: center;
+    font: bold 40px 'Calibri';
+}
+
+.recorder {
+    height: 200px;
+    width: 200px;
+
+    position: absolute;
+    top: 300px;
+    left: 650px;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.recorder-title {
+    height: 50px;
+
+    font: bold 24px 'Arial';
+}
+
+.recorder-game {
+    height: 30px;
+    width: 300px;
+
+    display: flex;
+    flex-direction: row;
+}
+
+.recorder-name {
+    height: 30px;
+    width: 70px;
+
+    text-align: center;
+    line-height: 50px;
+    font: 20px 'Arial';
+}
+
+.recorder-score {
+    height: 30px;
+    width: 80px;
+
+    text-align: center;
+    line-height: 50px;
+    font: 20px 'Arial';
+}
+
+.recorder-black {
+    height: 18px;
+    width: 18px;
+
+    position: absolute;
+    top: 350px;
+    left: 615px;
+
+    border: 2px solid black;
+    border-radius: 18px;
+    background: #000;
+}
+
+.recorder-white {
+    height: 18px;
+    width: 18px;
+
+    position: absolute;
+    top: 350px;
+    left: 975px;
+
+    border: 2px solid black;
+    border-radius: 18px;
+    background: #fff;
+}
+
+.btn {
+    height: 50px;
+    width: 150px;
+
+    position: absolute;
+    top: 575px;
+
+    background: #ccc;
+    border: 1px solid black;
+
+    text-align: center;
+    line-height: 50px;
+    font: 22px 'Arial';
+}
+
+#restart {
+    left: 650px;
+}
+
+#back {
+    left: 850px;
+}
