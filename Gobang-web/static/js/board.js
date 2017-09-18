@@ -36,14 +36,28 @@ let board,
         return null
     })
 
+$.extend({
+    get: function(url, args){
+        let body = $(document.body),
+            form = $("<form></form>"),
+            input
+        form.attr({'action': url})
+        $.each(args, function(key, value){
+            input = $("<input type='hidden'>")
+            input.attr({"name": key})
+            input.val(value)
+            form.append(input)
+        })
+        form.appendTo(body)
+        form.submit()
+        body.removeChild(form)
+    }
+})
+
 function init() {
     document.oncontextmenu = function () {
         event.returnValue = false
     }
-
-    $.getJSON('/board', function (data) {
-        alert(data)
-    })
 
     initElement()
     createBoard()
@@ -53,7 +67,7 @@ function init() {
 }
 
 function onRestart() {
-    if (!confirm('P1('+playerNames[0]+') choose still choose color BLACK ?')) {
+    if (!confirm('P1('+playerNames[0]+') still choose color BLACK ?')) {
         [playerNames[0], playerNames[1]] = [playerNames[1], playerNames[0]];
         [playerSubNames[0], playerSubNames[1]] = [playerSubNames[1], playerSubNames[0]];
         [playerScores[0], playerScores[1]] = [playerScores[1], playerScores[0]];
@@ -61,25 +75,30 @@ function onRestart() {
     resetData()
 }
 
+function onBack() {
+    $.get('/')
+}
+
 function initElement() {
-    board = document.getElementById('board')
-    chess = document.getElementById('chess')
-    names = [document.getElementById('p1-name'), document.getElementById('p2-name')]
-    scores = [document.getElementById('p1-score'), document.getElementById('p2-score')]
-    subnames = [document.getElementById('p1-sub-name'), document.getElementById('p2-sub-name')]
-    playersWinner = [document.getElementById('p1-winner'), document.getElementById('p2-winner')]
-    nowContent = document.getElementById('now-content')
-    recordP1Names = [document.getElementById('g1-p1-name'), document.getElementById('g2-p1-name'),
-        document.getElementById('g3-p1-name'), document.getElementById('g4-p1-name'),
-        document.getElementById('g5-p1-name')]
-    recordP1Scores = [document.getElementById('g1-p1-score'), document.getElementById('g2-p1-score'),
-        document.getElementById('g3-p1-score'), document.getElementById('g4-p1-score'), document.getElementById('g5-p1-score')]
-    recordP2Names = [document.getElementById('g1-p2-name'), document.getElementById('g2-p2-name'),
-        document.getElementById('g3-p2-name'), document.getElementById('g4-p2-name'),
-        document.getElementById('g5-p2-name')]
-    recordP2Scores = [document.getElementById('g1-p2-score'), document.getElementById('g2-p2-score'),
-        document.getElementById('g3-p2-score'), document.getElementById('g4-p2-score'),
-        document.getElementById('g5-p2-score')]
+    board = $('#board')
+    chess = $('#chess')
+    names = [$('#p1-name'), $('#p2-name')]
+    scores = [$('#p1-score'), $('#p2-score')]
+    subnames = [$('#p1-sub-name'), $('#p2-sub-name')]
+    playersWinner = [$('#p1-winner'), $('#p2-winner')]
+    nowContent = $('#now-content')
+    recordP1Names = [$('#g1-p1-name'), $('#g2-p1-name'),
+        $('#g3-p1-name'), $('#g4-p1-name'),
+        $('#g5-p1-name')]
+    recordP1Scores = [$('#g1-p1-score'), $('#g2-p1-score'),
+        $('#g3-p1-score'), $('#g4-p1-score'), $('#g5-p1-score')]
+    recordP2Names = [$('#g1-p2-name'), $('#g2-p2-name'),
+        $('#g3-p2-name'), $('#g4-p2-name'),
+        $('#g5-p2-name')]
+    recordP2Scores = [$('#g1-p2-score'), $('#g2-p2-score'),
+        $('#g3-p2-score'), $('#g4-p2-score'),
+        $('#g5-p2-score')]
+    playerTypes = [parseInt($('#p1-type').text()), parseInt($('#p2-type').text())]
 }
 
 function setName() {
@@ -99,11 +118,12 @@ function setName() {
 }
 
 function resetData() {
-    playersWinner[0].hidden = true
-    playersWinner[1].hidden = true
-    nowContent.innerText = 'BLACK 1'
+    for (let winner of playersWinner) {
+        winner.attr('hidden', true)
+    }
+    nowContent.text('BLACK 1')
     if (indexs.length > 0) {
-        auxiPointsArray[indexs[indexs.length-1]].hidden = true
+        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', true)
     }
     indexs = []
     round = 1
@@ -112,38 +132,38 @@ function resetData() {
         return null
     })
     for (let chess of chessArray) {
-        chess.hidden = true
+        chess.attr('hidden', true)
     }
     updateData()
 }
 
 function updateData() {
     for (let i = 0; i < 2; ++i) {
-        names[i].innerText = playerNames[i]
-        names[i].style.color = '#000'
-        scores[i].innerText = playerScores[i]
-        scores[i].style.color = '#000'
-        subnames[i].innerText = playerSubNames[i]
-        subnames[i].style.color = '#000'
+        names[i].text(playerNames[i])
+        names[i].css('color', '#000')
+        scores[i].text(playerScores[i])
+        scores[i].css('color', '#000')
+        subnames[i].text(playerSubNames[i])
+        subnames[i].css('color', '#000')
     }
     for (let i = 0; i < 5; ++i) {
-        recordP1Names[i].innerText = recordsNamesP1[i]
-        recordP1Scores[i].innerText = recordsScoresP1[i]
-        recordP2Names[i].innerText = recordsNamesP2[i]
-        recordP2Scores[i].innerText = recordsScoresP2[i]
+        recordP1Names[i].text(recordsNamesP1[i])
+        recordP1Scores[i].text(recordsScoresP1[i])
+        recordP2Names[i].text(recordsNamesP2[i])
+        recordP2Scores[i].text(recordsScoresP2[i])
         if (recordsScoresP1[i].length > 0) {
-            recordP1Names[i].style.color = '#f00'
-            recordP1Scores[i].style.color = '#f00'
+            recordP1Names[i].css('color', '#f00')
+            recordP1Scores[i].css('color', '#f00')
         } else {
-            recordP1Names[i].style.color = '#000'
-            recordP1Scores[i].style.color = '#000'
+            recordP1Names[i].css('color', '#000')
+            recordP1Scores[i].css('color', '#000')
         }
         if (recordsScoresP2[i].length > 0) {
-            recordP2Names[i].style.color = '#f00'
-            recordP2Scores[i].style.color = '#f00'
+            recordP2Names[i].css('color', '#f00')
+            recordP2Scores[i].css('color', '#f00')
         } else {
-            recordP2Names[i].style.color = '#000'
-            recordP2Scores[i].style.color = '#000'
+            recordP2Names[i].css('color', '#000')
+            recordP2Scores[i].css('color', '#000')
         }
     }
 }
@@ -151,22 +171,22 @@ function updateData() {
 function createChess() {
     for (let row = 0; row < SIDE_NUM; ++row) {
         for (let col = 0; col < SIDE_NUM; ++col) {
-            let circle = document.createElement('div')
-            circle.className = 'chess-circle'
-            circle.id = 'chess' + (row * SIDE_NUM + col).toString()
-            circle.style.left = (col * RECT_WIDTH) + 'px'
-            circle.style.top = (row * RECT_WIDTH) + 'px'
-            circle.hidden = true
-            chess.appendChild(circle)
+            let circle = $("<div class='chess-circle' hidden></div>")
+            circle.attr('id', 'chess' + (row * SIDE_NUM + col))
+            circle.css({
+                'left': col * RECT_WIDTH + 'px',
+                'top': row * RECT_WIDTH + 'px'
+            })
+            circle.appendTo(chess)
             chessArray[row * SIDE_NUM + col] = circle
 
-            let point = document.createElement('div')
-            point.className = 'auxi-points'
-            point.id = 'point' + (row * SIDE_NUM + col).toString()
-            point.style.left = (col * RECT_WIDTH) + 'px'
-            point.style.top = (row * RECT_WIDTH) + 'px'
-            point.hidden = true
-            chess.appendChild(point)
+            let point = $("<div class='auxi-points' hidden></div>")
+            point.attr('id', 'point' + (row * SIDE_NUM + col))
+            point.css({
+                'left': col * RECT_WIDTH + 'px',
+                'top': row * RECT_WIDTH + 'px'
+            })
+            point.appendTo(chess)
             auxiPointsArray[row * SIDE_NUM + col] = point
         }
     }
@@ -175,21 +195,23 @@ function createChess() {
 function createBoard() {
     for (let row = 0; row < SIDE_NUM - 1; ++row) {
         for (let col = 0; col < SIDE_NUM - 1; ++col) {
-            let rect = document.createElement('div')
-            rect.className = 'board-rect'
-            rect.id = 'rect' + (row * SIDE_NUM + col).toString()
-            rect.style.left = (col * RECT_WIDTH) + 'px'
-            rect.style.top = (row * RECT_WIDTH) + 'px'
-            board.appendChild(rect)
+            let rect = $("<div class='board-rect'></div>")
+            rect.attr('id', 'rect' + (row * SIDE_NUM + col))
+            rect.css({
+                'left': col * RECT_WIDTH + 'px',
+                'top': row * RECT_WIDTH + 'px'
+            })
+            rect.appendTo(board)
         }
     }
     for (let i = 0; i < BOARD_STAR_ROW.length; ++i) {
-        let circle = document.createElement('div')
-        circle.className = 'board-star'
-        circle.id = BOARD_STAR_ROW[i] * SIDE_NUM + BOARD_STAR_COL[i]
-        circle.style.left = (BOARD_STAR_COL[i] * RECT_WIDTH) + 'px'
-        circle.style.top = (BOARD_STAR_ROW[i] * RECT_WIDTH) + 'px'
-        chess.appendChild(circle)
+        let circle = $("<div class='board-star'></div>")
+        circle.attr('id', 'star' + (BOARD_STAR_ROW[i] * SIDE_NUM + BOARD_STAR_COL[i]))
+        circle.css({
+            'left': BOARD_STAR_COL[i] * RECT_WIDTH + 'px',
+            'top': BOARD_STAR_ROW[i] * RECT_WIDTH + 'px'
+        })
+        circle.appendTo(chess)
     }
 }
 
@@ -201,35 +223,44 @@ function onChessClick(e) {
         i = Math.floor(y / RECT_WIDTH) * SIDE_NUM + Math.floor(x / RECT_WIDTH)
     if (boardStatus[i] === null) {
         turnOn = false
-        chessArray[i].hidden = false
-        chessArray[i].style.background = round % 2 === 1 ? '#000' : '#fff'
-        boardStatus[i] = round % 2 === 1
-        indexs.push(i)
-        execTurn()
+        putChess(i)
     }
+}
+
+function putChess(i) {
+    chessArray[i].attr('hidden', false)
+    chessArray[i].css('background', round % 2 === 1 ? '#000' : '#fff')
+    boardStatus[i] = round % 2 === 1
+    indexs.push(i)
+    execTurn()
 }
 
 function execTurn() {
     if (indexs.length > 1) {
-        auxiPointsArray[indexs[indexs.length-2]].hidden = true
-        auxiPointsArray[indexs[indexs.length-1]].hidden = false
+        auxiPointsArray[indexs[indexs.length-2]].attr('hidden', true)
+        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', false)
     } else {
-        auxiPointsArray[indexs[indexs.length-1]].hidden = false
+        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', false)
     }
 
     if (judgeWin()) {
         let color = (round - 1) % 2
         playerScores[color]++
-        playersWinner[color].hidden = false
+        playersWinner[color].attr('hidden', false)
         insertRecord()
         updateData()
-        names[color].style.color = '#f00'
-        scores[color].style.color = '#f00'
-        subnames[color].style.color = '#f00'
+        names[color].css('color', '#f00')
+        scores[color].css('color', '#f00')
+        subnames[color].css('color', '#f00')
     } else {
         round++
-        nowContent.innerText = round % 2 === 1 ? 'BLACK '+round : 'WHITE '+round
-        turnOn = true
+        let color = (round - 1) % 2
+        nowContent.text(color === 0 ? 'BLACK '+round : 'WHITE '+round)
+        if (playerTypes[color] > 0) {
+            callAI(playerTypes[color])
+        } else {
+            turnOn = true
+        }
     }
 }
 
@@ -284,4 +315,25 @@ function insertRecord() {
     } else {
         recordsScoresP2[recordsNamesP1.length - 1] = round + 'W'
     }
+}
+
+function callAI(level) {
+    let data = {
+        'boardStatus': boardStatus,
+        'round': round,
+        'level': level
+    }
+    $.ajax({
+        type: 'POST',
+        url: '/ai',
+        data: JSON.stringify(data),
+        contentType: 'application/json; charset=UTF-8',
+        dataType: 'json',
+        success: function(data) {
+            putChess(data.index)
+        },
+        error: function (xhr, type) {
+            console.log(xhr)
+        }
+    })
 }

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Gobang</title>
     <link type="text/css" rel="stylesheet" href="../static/css/board.css" />
-    <script src="../static/js/board.js" ></script>
     <script src="../static/js/jquery-3.2.1.min.js"></script>
+    <script src="../static/js/board.js" ></script>
 </head>
 <body onload="init()">
     <div class="container">
@@ -71,5 +71,7 @@
         <button class="btn" id="restart" onclick="onRestart()">RESTART</button>
         <button class="btn" id="back" onclick="onBack()">BACK</button>
     </div>
+    <div id="p1-type" hidden>{{p1_type}}</div>
+    <div id="p2-type" hidden>{{p2_type}}</div>
 </body>
 </html>
