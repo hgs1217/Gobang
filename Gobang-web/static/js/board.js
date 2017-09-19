@@ -37,12 +37,12 @@ let board,
     })
 
 $.extend({
-    get: function(url, args){
+    get: function (url, args) {
         let body = $(document.body),
             form = $("<form></form>"),
             input
         form.attr({'action': url})
-        $.each(args, function(key, value){
+        $.each(args, function (key, value) {
             input = $("<input type='hidden'>")
             input.attr({"name": key})
             input.val(value)
@@ -67,7 +67,7 @@ function init() {
 }
 
 function onRestart() {
-    if (!confirm('P1('+playerNames[0]+') still choose color BLACK ?')) {
+    if (!confirm('P1(' + playerNames[0] + ') still choose color BLACK ?')) {
         [playerNames[0], playerNames[1]] = [playerNames[1], playerNames[0]];
         [playerSubNames[0], playerSubNames[1]] = [playerSubNames[1], playerSubNames[0]];
         [playerScores[0], playerScores[1]] = [playerScores[1], playerScores[0]];
@@ -107,13 +107,13 @@ function setName() {
         playerSubNames = ['', '']
     } else if (playerTypes[0] > 0 && playerTypes[1] > 0) {
         playerNames = ['COM1', 'COM2']
-        playerSubNames = ['(AI LV'+playerTypes[0]+')', '(AI LV'+playerTypes[1]+')']
+        playerSubNames = ['(AI LV' + playerTypes[0] + ')', '(AI LV' + playerTypes[1] + ')']
     } else if (playerTypes[0] === 0 && playerTypes[1] > 0) {
         playerNames = ['YOU', 'COM']
-        playerSubNames = ['', '(AI LV'+playerTypes[1]+')']
+        playerSubNames = ['', '(AI LV' + playerTypes[1] + ')']
     } else if (playerTypes[0] > 0 && playerTypes[1] === 0) {
         playerNames = ['COM', 'YOU']
-        playerSubNames = ['(AI LV'+playerTypes[0]+')', '']
+        playerSubNames = ['(AI LV' + playerTypes[0] + ')', '']
     }
 }
 
@@ -123,18 +123,23 @@ function resetData() {
     }
     nowContent.text('BLACK 1')
     if (indexs.length > 0) {
-        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', true)
+        auxiPointsArray[indexs[indexs.length - 1]].attr('hidden', true)
     }
     indexs = []
     round = 1
-    turnOn = true
     boardStatus = Array.apply(null, Array(SIDE_NUM * SIDE_NUM)).map(function (item, i) {
-        return null
+        return 0
     })
     for (let chess of chessArray) {
         chess.attr('hidden', true)
     }
     updateData()
+
+    if (playerTypes[0] > 0) {
+        callAI(playerTypes[0])
+    } else {
+        turnOn = true
+    }
 }
 
 function updateData() {
@@ -221,7 +226,7 @@ function onChessClick(e) {
     let x = e.pageX - CHESS_LEFT,
         y = e.pageY - CHESS_TOP,
         i = Math.floor(y / RECT_WIDTH) * SIDE_NUM + Math.floor(x / RECT_WIDTH)
-    if (boardStatus[i] === null) {
+    if (boardStatus[i] === 0) {
         turnOn = false
         putChess(i)
     }
@@ -230,17 +235,17 @@ function onChessClick(e) {
 function putChess(i) {
     chessArray[i].attr('hidden', false)
     chessArray[i].css('background', round % 2 === 1 ? '#000' : '#fff')
-    boardStatus[i] = round % 2 === 1
+    boardStatus[i] = round % 2 === 1 ? 1 : -1
     indexs.push(i)
     execTurn()
 }
 
 function execTurn() {
     if (indexs.length > 1) {
-        auxiPointsArray[indexs[indexs.length-2]].attr('hidden', true)
-        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', false)
+        auxiPointsArray[indexs[indexs.length - 2]].attr('hidden', true)
+        auxiPointsArray[indexs[indexs.length - 1]].attr('hidden', false)
     } else {
-        auxiPointsArray[indexs[indexs.length-1]].attr('hidden', false)
+        auxiPointsArray[indexs[indexs.length - 1]].attr('hidden', false)
     }
 
     if (judgeWin()) {
@@ -255,7 +260,7 @@ function execTurn() {
     } else {
         round++
         let color = (round - 1) % 2
-        nowContent.text(color === 0 ? 'BLACK '+round : 'WHITE '+round)
+        nowContent.text(color === 0 ? 'BLACK ' + round : 'WHITE ' + round)
         if (playerTypes[color] > 0) {
             callAI(playerTypes[color])
         } else {
@@ -267,9 +272,12 @@ function execTurn() {
 function judgeWin() {
     const chessArray = []
     let candidateIndex,
+        lastIndex,
+        lastRow,
+        lastCol,
         status
     for (let i = 0; i < boardStatus.length; ++i) {
-        if (boardStatus[i] !== null) {
+        if (boardStatus[i] !== 0) {
             chessArray.push(i)
         }
     }
@@ -279,9 +287,20 @@ function judgeWin() {
         for (let dir of DIRECTION_ARRAY) {
             for (let i = 1; i <= 4; ++i) {
                 candidateIndex = index + i * dir
-                if (candidateIndex >= 0 && candidateIndex < boardStatus.length &&
-                    boardStatus[candidateIndex] === status) {
-                    if (i === 4) return true
+                lastIndex = candidateIndex - dir
+                lastRow = lastIndex / SIDE_NUM
+                lastCol = lastIndex % SIDE_NUM
+                if (lastCol === 0 && (dir + 2 * SIDE_NUM) % SIDE_NUM === SIDE_NUM - 1 ||
+                    lastCol === SIDE_NUM - 1 && (dir + SIDE_NUM) % SIDE_NUM === 1 ||
+                    lastRow === 0 && dir <= -SIDE_NUM + 1 ||
+                    lastRow === SIDE_NUM - 1 && dir >= SIDE_NUM - 1) {
+                    break
+                }
+                if (boardStatus[candidateIndex] === status) {
+                    if (i === 4) {
+                        console.log(candidateIndex, lastIndex, dir)
+                        return true
+                    }
                     continue
                 }
                 break
@@ -329,7 +348,7 @@ function callAI(level) {
         data: JSON.stringify(data),
         contentType: 'application/json; charset=UTF-8',
         dataType: 'json',
-        success: function(data) {
+        success: function (data) {
             putChess(data.index)
         },
         error: function (xhr, type) {
