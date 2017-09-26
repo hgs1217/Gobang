@@ -48,6 +48,16 @@
     position: absolute;
 }
 
+.board-mark {
+    height: 32px;
+    width: 32px;
+
+    position: absolute;
+
+    text-align: center;
+    font: 14px 'Calibri';
+}
+
 .board-star {
     height: 6px;
     width: 6px;
@@ -153,6 +163,11 @@
 
 #p2-winner {
     left: 500px;
+}
+
+#draw {
+    color: #000;
+    left: 260px;
 }
 
 .now-bar {

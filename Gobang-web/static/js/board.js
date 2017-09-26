@@ -7,11 +7,13 @@ const SIDE_NUM = 15,
     DIRECTION_ARRAY = [-SIDE_NUM - 1, -SIDE_NUM, -SIDE_NUM + 1, -1, 1, SIDE_NUM - 1, SIDE_NUM, SIDE_NUM + 1]
 
 let board,
+    container,
     chess,
     names,
     scores,
     subnames,
     playersWinner,
+    draw,
     nowContent,
     recordP1Names,
     recordP1Scores,
@@ -68,10 +70,12 @@ function init() {
 
 function onRestart() {
     if (!confirm('P1(' + playerNames[0] + ') still choose color BLACK ?')) {
+        [playerTypes[0], playerTypes[1]] = [playerTypes[1], playerTypes[0]];
         [playerNames[0], playerNames[1]] = [playerNames[1], playerNames[0]];
         [playerSubNames[0], playerSubNames[1]] = [playerSubNames[1], playerSubNames[0]];
         [playerScores[0], playerScores[1]] = [playerScores[1], playerScores[0]];
     }
+    initAI()
     resetData()
 }
 
@@ -81,11 +85,13 @@ function onBack() {
 
 function initElement() {
     board = $('#board')
+    container = $('#container')
     chess = $('#chess')
     names = [$('#p1-name'), $('#p2-name')]
     scores = [$('#p1-score'), $('#p2-score')]
     subnames = [$('#p1-sub-name'), $('#p2-sub-name')]
     playersWinner = [$('#p1-winner'), $('#p2-winner')]
+    draw = $('#draw')
     nowContent = $('#now-content')
     recordP1Names = [$('#g1-p1-name'), $('#g2-p1-name'),
         $('#g3-p1-name'), $('#g4-p1-name'),
@@ -121,6 +127,7 @@ function resetData() {
     for (let winner of playersWinner) {
         winner.attr('hidden', true)
     }
+    draw.attr('hidden', true)
     nowContent.text('BLACK 1')
     if (indexs.length > 0) {
         auxiPointsArray[indexs[indexs.length - 1]].attr('hidden', true)
@@ -156,17 +163,19 @@ function updateData() {
         recordP1Scores[i].text(recordsScoresP1[i])
         recordP2Names[i].text(recordsNamesP2[i])
         recordP2Scores[i].text(recordsScoresP2[i])
-        if (recordsScoresP1[i].length > 0) {
+        if (recordsScoresP1[i].length > 0 && recordsScoresP2[i].length === 0) {
             recordP1Names[i].css('color', '#f00')
             recordP1Scores[i].css('color', '#f00')
+            recordP2Names[i].css('color', '#000')
+            recordP2Scores[i].css('color', '#000')
+        } else if (recordsScoresP2[i].length > 0 && recordsScoresP1[i].length === 0) {
+            recordP2Names[i].css('color', '#f00')
+            recordP2Scores[i].css('color', '#f00')
+            recordP1Names[i].css('color', '#000')
+            recordP1Scores[i].css('color', '#000')
         } else {
             recordP1Names[i].css('color', '#000')
             recordP1Scores[i].css('color', '#000')
-        }
-        if (recordsScoresP2[i].length > 0) {
-            recordP2Names[i].css('color', '#f00')
-            recordP2Scores[i].css('color', '#f00')
-        } else {
             recordP2Names[i].css('color', '#000')
             recordP2Scores[i].css('color', '#000')
         }
@@ -209,6 +218,29 @@ function createBoard() {
             rect.appendTo(board)
         }
     }
+
+    for (let row = 0; row < SIDE_NUM; ++row) {
+        let rect = $("<div class='board-mark'></div>")
+        rect.attr('id', 'mark-row' + row)
+        rect.css({
+            'left': -1.2 * RECT_WIDTH + 'px',
+            'top': (row * RECT_WIDTH - RECT_WIDTH / 4) + 'px'
+        })
+        rect.text(row + 1);
+        rect.appendTo(board)
+    }
+
+    for (let col = 0; col < SIDE_NUM; ++col) {
+        let rect = $("<div class='board-mark'></div>")
+        rect.attr('id', 'mark-col' + col)
+        rect.css({
+            'left': (col * RECT_WIDTH - RECT_WIDTH / 2) + 'px',
+            'top': -RECT_WIDTH + 'px'
+        })
+        rect.text(col + 1);
+        rect.appendTo(board)
+    }
+
     for (let i = 0; i < BOARD_STAR_ROW.length; ++i) {
         let circle = $("<div class='board-star'></div>")
         circle.attr('id', 'star' + (BOARD_STAR_ROW[i] * SIDE_NUM + BOARD_STAR_COL[i]))
@@ -261,10 +293,16 @@ function execTurn() {
         round++
         let color = (round - 1) % 2
         nowContent.text(color === 0 ? 'BLACK ' + round : 'WHITE ' + round)
-        if (playerTypes[color] > 0) {
-            callAI(playerTypes[color])
+        if (round > SIDE_NUM * SIDE_NUM) {
+            insertRecord()
+            updateData()
+            draw.attr('hidden', false)
         } else {
-            turnOn = true
+            if (playerTypes[color] > 0) {
+                callAI(playerTypes[color])
+            } else {
+                turnOn = true
+            }
         }
     }
 }
@@ -298,7 +336,6 @@ function judgeWin() {
                 }
                 if (boardStatus[candidateIndex] === status) {
                     if (i === 4) {
-                        console.log(candidateIndex, lastIndex, dir)
                         return true
                     }
                     continue
@@ -315,10 +352,15 @@ function insertRecord() {
         if (recordsNamesP1[i].length === 0) {
             recordsNamesP1[i] = playerNames[0]
             recordsNamesP2[i] = playerNames[1]
-            if (round % 2 === 1) {
-                recordsScoresP1[i] = round + 'W'
+            if (round > SIDE_NUM * SIDE_NUM) {
+                recordsScoresP1[i] = 'DRAW'
+                recordsScoresP2[i] = 'DRAW'
             } else {
-                recordsScoresP2[i] = round + 'W'
+                if (round % 2 === 1) {
+                    recordsScoresP1[i] = round + 'W'
+                } else {
+                    recordsScoresP2[i] = round + 'W'
+                }
             }
             return
         }
@@ -329,10 +371,19 @@ function insertRecord() {
         recordsScoresP1[i] = recordsScoresP1[i + 1]
         recordsScoresP2[i] = recordsScoresP2[i + 1]
     }
-    if (round % 2 === 1) {
-        recordsScoresP1[recordsNamesP1.length - 1] = round + 'W'
+    recordsNamesP1[recordsNamesP1.length - 1] = playerNames[0]
+    recordsNamesP2[recordsNamesP1.length - 1] = playerNames[1]
+    if (round > SIDE_NUM * SIDE_NUM) {
+        recordsScoresP1[recordsNamesP1.length - 1] = 'DRAW'
+        recordsScoresP2[recordsNamesP1.length - 1] = 'DRAW'
     } else {
-        recordsScoresP2[recordsNamesP1.length - 1] = round + 'W'
+        if (round % 2 === 1) {
+            recordsScoresP1[recordsNamesP1.length - 1] = round + 'W'
+            recordsScoresP2[recordsNamesP1.length - 1] = ''
+        } else {
+            recordsScoresP2[recordsNamesP1.length - 1] = round + 'W'
+            recordsScoresP1[recordsNamesP1.length - 1] = ''
+        }
     }
 }
 
@@ -340,7 +391,8 @@ function callAI(level) {
     let data = {
         'boardStatus': boardStatus,
         'round': round,
-        'level': level
+        'level': level,
+        'index': indexs.length > 0 ? indexs[indexs.length - 1] : -1
     }
     $.ajax({
         type: 'POST',
@@ -350,6 +402,19 @@ function callAI(level) {
         dataType: 'json',
         success: function (data) {
             putChess(data.index)
+        },
+        error: function (xhr, type) {
+            console.log(xhr)
+        }
+    })
+}
+
+function initAI() {
+    $.ajax({
+        type: 'POST',
+        url: '/init',
+        success: function (data) {
+            console.log(data)
         },
         error: function (xhr, type) {
             console.log(xhr)
