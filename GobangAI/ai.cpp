@@ -25,7 +25,8 @@ const int SCORE_DEAD_FOUR = 50;
 const int SCORE_GAP_FOUR = 50;
 const int SCORE_GAP_FIVE = 50;
 
-const int MAX_EXTEND = 1;
+const int FILTER_SIZE = 10;
+int MAX_EXTEND = 2;
 int MAX_DEPTH = 8;
 
 vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0);
@@ -75,7 +76,7 @@ string constructKey(const int boardStatus[], const int &depth, const int &color)
     return ss.str();
 }
 
-bool judgeFrontierContinue(int index, int dir) {
+bool judgeFrontierContinue(int &index, int &dir) {
 
     int row = index / LINE_NUM, col = index % LINE_NUM;
     return !(col == 0 && (dir + 2 * LINE_NUM) % LINE_NUM == LINE_NUM - 1 ||
@@ -84,7 +85,8 @@ bool judgeFrontierContinue(int index, int dir) {
              row == LINE_NUM - 1 && dir >= LINE_NUM - 1);
 }
 
-int judgeModel(const int cnt, const int wall, const int gap, const int continueCnt) {
+int judgeModel(const int &cnt, const int &wall, const int &gap, const int &continueCnt, const int &nearWallZero) {
+
     switch (cnt) {
         case 0:
         case 1:
@@ -92,22 +94,30 @@ int judgeModel(const int cnt, const int wall, const int gap, const int continueC
         case 2:
             if (wall == 0) {
                 if (gap == 0) {
-                    return SCORE_LIVE_TWO;
+                    if (nearWallZero < 2) {
+                        return SCORE_LIVE_TWO;
+                    } else {
+                        return SCORE_DEAD_TWO;
+                    }
                 } else if (gap == 1) {
                     return SCORE_GAP_TWO;
                 }
-            } else if (wall == 1 && gap == 0) {
+            } else if (wall == 1 && gap == 0 && nearWallZero == 0) {
                 return SCORE_DEAD_TWO;
             }
             break;
         case 3:
             if (wall == 0) {
                 if (gap == 0) {
-                    return SCORE_LIVE_THREE;
+                    if (nearWallZero < 2) {
+                        return SCORE_LIVE_THREE;
+                    } else {
+                        return SCORE_DEAD_THREE;
+                    }
                 } else if (gap == 1) {
                     return SCORE_GAP_THREE;
                 }
-            } else if (wall == 1) {
+            } else if (wall == 1 && nearWallZero == 0) {
                 return SCORE_DEAD_THREE;
             }
             break;
@@ -143,67 +153,79 @@ int judgeModel(const int cnt, const int wall, const int gap, const int continueC
 
 int calculateScore(const int boardStatus[], const int &originColor, const vector<vector<int>> &dirArray) {
 
-    int cnt, wall, gap, tmpColor, conCnt, maxConCnt, score, total = 0;
-    bool lastIsBlank;
+    int cnt, wall, gap, nearWallZero, tmpColor, conCnt, maxConCnt, score, total = 0;
+    bool lastIsBlank, firstIndex;
 
     for (const vector<int> &line : dirArray) {
-        tmpColor = cnt = gap = wall = conCnt = maxConCnt = 0;
+        tmpColor = nearWallZero = cnt = gap = wall = conCnt = maxConCnt = 0;
         lastIsBlank = false;
+        firstIndex = true;
         for (int index : line) {
             if (index == -1) {
                 if (!lastIsBlank) {
                     wall++;
                     lastIsBlank = true;
+                } else {
+                    nearWallZero++;
                 }
                 if (tmpColor != 0) {
-                    score = judgeModel(cnt, wall, gap, maxConCnt);
+                    score = judgeModel(cnt, wall, gap, maxConCnt, nearWallZero);
                     total += (tmpColor == originColor ? score : -score);
                 }
-            } else if (boardStatus[index] == 0) {
-                if (lastIsBlank) {
-                    if (tmpColor != 0) {
-                        score = judgeModel(cnt, wall, gap, maxConCnt);
-                        total += (tmpColor == originColor ? score : -score);
-                        gap = cnt = tmpColor = conCnt = maxConCnt = 0;
+            } else {
+                if (boardStatus[index] == 0) {
+                    if (lastIsBlank) {
+                        if (tmpColor != 0) {
+                            score = judgeModel(cnt, wall, gap, maxConCnt, nearWallZero);
+                            total += (tmpColor == originColor ? score : -score);
+                            gap = cnt = nearWallZero = tmpColor = conCnt = maxConCnt = 0;
+                        } else if (firstIndex) {
+                            nearWallZero++;
+                        }
+                        wall = 0;
+                    } else {
+                        lastIsBlank = true;
+                        if (conCnt > maxConCnt) {
+                            maxConCnt = conCnt;
+                        }
+                        conCnt = 0;
                     }
-                    wall = 0;
-                } else {
-                    lastIsBlank = true;
+                } else if (boardStatus[index] == tmpColor) {
+                    if (lastIsBlank) {
+                        gap++;
+                    }
+                    cnt++;
+                    conCnt++;
+                    lastIsBlank = false;
+                } else if (boardStatus[index] == -tmpColor) {
+                    if (!lastIsBlank) {
+                        wall++;
+                    } else {
+                        nearWallZero++;
+                    }
                     if (conCnt > maxConCnt) {
                         maxConCnt = conCnt;
                     }
-                    conCnt = 0;
-                }
-            } else if (boardStatus[index] == tmpColor) {
-                if (lastIsBlank) {
-                    gap++;
-                }
-                cnt++;
-                conCnt++;
-                lastIsBlank = false;
-            } else if (boardStatus[index] == -tmpColor) {
-                if (!lastIsBlank) {
-                    wall++;
-                }
-                if (conCnt > maxConCnt) {
-                    maxConCnt = conCnt;
-                }
-                score = judgeModel(cnt, wall, gap, maxConCnt);
-                total += (tmpColor == originColor ? score : -score);
-                if (!lastIsBlank) {
-                    wall = 1;
+                    score = judgeModel(cnt, wall, gap, maxConCnt, nearWallZero);
+                    total += (tmpColor == originColor ? score : -score);
+                    if (!lastIsBlank) {
+                        wall = 1;
+                        nearWallZero = 0;
+                    } else {
+                        wall = 0;
+                        nearWallZero = 1;
+                    }
+                    lastIsBlank = false;
+                    gap = maxConCnt = 0;
+                    cnt = conCnt = 1;
+                    tmpColor = -tmpColor;
                 } else {
-                    wall = 0;
+                    tmpColor = boardStatus[index];
+                    gap = maxConCnt = 0;
+                    cnt = conCnt = 1;
+                    lastIsBlank = false;
                 }
-                lastIsBlank = false;
-                gap = maxConCnt = 0;
-                cnt = conCnt = 1;
-                tmpColor = -tmpColor;
-            } else {
-                tmpColor = boardStatus[index];
-                gap = maxConCnt = 0;
-                cnt = conCnt = 1;
-                lastIsBlank = false;
+                firstIndex = false;
             }
         }
     }
@@ -329,7 +351,7 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMin);
     }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), 10); ++i) {
+    for (int i = 0; i < min((int) scoreMapArray.size(), FILTER_SIZE); ++i) {
         index = scoreMapArray[i].index;
         tmpStatus[index] = color;
         int downScore = minMax(tmpStatus, originColor, depth + 1, score, index, scoreMapArray[i].score,
@@ -435,10 +457,10 @@ DLLEXPORT void __stdcall init() {
 DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level) {
 
     switch (level) {
-        case 1: MAX_DEPTH = 2;  break;
-        case 2: MAX_DEPTH = 4;  break;
-        case 3: MAX_DEPTH = 6;  break;
-        case 4: MAX_DEPTH = 8;  break;
+        case 1: MAX_DEPTH = 2;  MAX_EXTEND = 1;  break;
+        case 2: MAX_DEPTH = 4;  MAX_EXTEND = 1;  break;
+        case 3: MAX_DEPTH = 6;  MAX_EXTEND = 1;  break;
+        case 4: MAX_DEPTH = 8; MAX_EXTEND = 2;  break;
         default:    MAX_DEPTH = 1;  break;
     }
 
@@ -482,7 +504,7 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
         return lastIndex + DIRECTIONS[eng() % 8];
     }
 
-    vector<ScoreMap> scoreMapArray(0);
+    vector<ScoreMap> scoreMapArray(0), resultMapArray(0);
     vector<int> resultIndex(0);
     for (int i : nullIndex) {
         boardStatus[i] = color;
@@ -502,7 +524,7 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
 //        cout << map.index << " " << map.score << endl;
 //    }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), 10); ++i) {
+    for (int i = 0; i < min((int) scoreMapArray.size(), FILTER_SIZE); ++i) {
         index = scoreMapArray[i].index;
         boardStatus[index] = color;
         int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
@@ -514,10 +536,20 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
         } else if (s == score) {
             resultIndex.emplace_back(index);
         }
+        if (round <= 4) {
+            resultMapArray.emplace_back(ScoreMap(index, s));
+        }
         boardStatus[index] = 0;
     }
 
-    int result = resultIndex[eng() % resultIndex.size()];
+    int result;
+    if (round <= 4) {
+        sort(resultMapArray.begin(), resultMapArray.end(), sortScoreMapMax);
+        result = resultMapArray[eng() % 5].index;
+    } else {
+        result = resultIndex[eng() % resultIndex.size()];
+    }
+
     boardStatus[result] = color;
     currentBoardScore += calculateScoreChange(boardStatus, color, result);
     lastRound = round;
