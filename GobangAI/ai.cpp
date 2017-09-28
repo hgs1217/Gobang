@@ -10,6 +10,7 @@
 
 using namespace std;
 
+const double PI = 3.1415926;
 const int INFI = 9999999;
 const int LINE_NUM = 15;
 const int DIRECTIONS[8] = {-LINE_NUM, -LINE_NUM + 1, 1, LINE_NUM + 1, LINE_NUM, LINE_NUM - 1, -1, -LINE_NUM - 1};
@@ -19,15 +20,17 @@ const int SCORE_LIVE_FOUR = 1000;
 const int SCORE_LIVE_FIVE = 10000;
 const int SCORE_DEAD_TWO = 0;
 const int SCORE_GAP_TWO = 2;
-const int SCORE_DEAD_THREE = 3;
+const int SCORE_DEAD_THREE = 5;
 const int SCORE_GAP_THREE = 40;
 const int SCORE_DEAD_FOUR = 50;
-const int SCORE_GAP_FOUR = 50;
-const int SCORE_GAP_FIVE = 50;
+const int SCORE_GAP_FOUR = 40;
+const int SCORE_GAP_FIVE = 40;
 
 const int FILTER_SIZE = 10;
+const int OUTER_FILTER_SIZE = 15;
 int MAX_EXTEND = 2;
 int MAX_DEPTH = 8;
+double WIN_RATE = 50;
 
 vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0);
 map<string, int> substitutionMap;
@@ -294,7 +297,7 @@ int judgeWin(const int boardStatus[]) {
 int minMax(int boardStatus[], const int &originColor, const int depth, const int &upperScore,
            const int &lastIndex, const int &boardScore, const set<int> &nullIndexSet) {
 
-    int tmp, lastTmp, score, color, index;
+    int tmp, lastTmp, score, color, index, filter = depth <= 1 ? OUTER_FILTER_SIZE : FILTER_SIZE;
 
     if (depth % 2 == 1) {
         score = INFI;
@@ -351,7 +354,7 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMin);
     }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), FILTER_SIZE); ++i) {
+    for (int i = 0; i < min((int) scoreMapArray.size(), filter); ++i) {
         index = scoreMapArray[i].index;
         tmpStatus[index] = color;
         int downScore = minMax(tmpStatus, originColor, depth + 1, score, index, scoreMapArray[i].score,
@@ -447,22 +450,46 @@ void sliceBoard() {
     }
 }
 
-DLLEXPORT void __stdcall init() {
+void setDepth(int level) {
+    switch (level) {
+        case 1:
+            MAX_DEPTH = 2;
+            MAX_EXTEND = 1;
+            break;
+        case 2:
+            MAX_DEPTH = 4;
+            MAX_EXTEND = 1;
+            break;
+        case 3:
+            MAX_DEPTH = 6;
+            MAX_EXTEND = 1;
+            break;
+        case 4:
+            MAX_DEPTH = 8;
+            MAX_EXTEND = 2;
+            break;
+        default:
+            MAX_DEPTH = 1;
+            break;
+    }
+}
+
+void updateWinRate(double score) {
+    WIN_RATE = 100.0 / PI * atan(score / 100.0) + 50;
+}
+
+DLLEXPORT double __cdecl getWinRate() {
+    return WIN_RATE;
+}
+
+DLLEXPORT void __cdecl init() {
     rowArray.clear();
     colArray.clear();
     diagRightUpArray.clear();
     diagRightDownArray.clear();
 }
 
-DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level) {
-
-    switch (level) {
-        case 1: MAX_DEPTH = 2;  MAX_EXTEND = 1;  break;
-        case 2: MAX_DEPTH = 4;  MAX_EXTEND = 1;  break;
-        case 3: MAX_DEPTH = 6;  MAX_EXTEND = 1;  break;
-        case 4: MAX_DEPTH = 8; MAX_EXTEND = 2;  break;
-        default:    MAX_DEPTH = 1;  break;
-    }
+DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) {
 
     int boardStatus[LINE_NUM * LINE_NUM];
     memcpy(boardStatus, statuses, LINE_NUM * LINE_NUM * sizeof(statuses[0]));
@@ -475,11 +502,18 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
     substitutionMap.clear();
 
     if (rowArray.empty()) {
+        setDepth(level);
         sliceBoard();
+        WIN_RATE = 50;
     }
 
     if (round - lastRound != 1 && lastIndex >= 0) {
         currentBoardScore += calculateScoreChange(boardStatus, color, lastIndex);
+    }
+
+    if (round <= 4) {
+        MAX_DEPTH = min(MAX_DEPTH, 4);
+        MAX_EXTEND = 1;
     }
 
     for (int i = 0; i < LINE_NUM * LINE_NUM; ++i) {
@@ -524,7 +558,7 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
 //        cout << map.index << " " << map.score << endl;
 //    }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), FILTER_SIZE); ++i) {
+    for (int i = 0; i < min((int) scoreMapArray.size(), OUTER_FILTER_SIZE); ++i) {
         index = scoreMapArray[i].index;
         boardStatus[index] = color;
         int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
@@ -545,9 +579,18 @@ DLLEXPORT int __stdcall call(int statuses[], int round, int lastIndex, int level
     int result;
     if (round <= 4) {
         sort(resultMapArray.begin(), resultMapArray.end(), sortScoreMapMax);
-        result = resultMapArray[eng() % 5].index;
+        ScoreMap sm;
+        if (round == 3) {
+            sm = resultMapArray[eng() % 8];
+        } else {
+            sm = resultMapArray[eng() % 5];
+        }
+        result = sm.index;
+        updateWinRate(sm.score);
+        setDepth(level);
     } else {
         result = resultIndex[eng() % resultIndex.size()];
+        updateWinRate(score);
     }
 
     boardStatus[result] = color;

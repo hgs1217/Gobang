@@ -198,6 +198,34 @@
     font: bold 40px 'Calibri';
 }
 
+.win-rate-bar {
+    height: 80px;
+    width: 320px;
+
+    position: absolute;
+    top: 220px;
+    left: 625px;
+
+    display: flex;
+    flex-direction: row;
+}
+
+.win-rate {
+    height: 80px;
+    width: 160px;
+
+    text-align: center;
+    font: bold 30px 'Calibri';
+}
+
+.win-rate-content {
+    height: 80px;
+    width: 160px;
+
+    text-align: center;
+    font: bold 30px 'Calibri';
+}
+
 .recorder {
     height: 200px;
     width: 200px;

@@ -12,7 +12,7 @@ def call(data):
     board_status, round, index, level = list(map(lambda x: int(x), data['boardStatus'])), int(data['round']), int(
         data['index']), int(data['level'])
     if not dll:
-        dll = WinDLL('libGobangAI.dll')
+        dll = CDLL('libGobangAI.dll')
     func = dll.call
     func.restype = c_int
     func.argtypes = POINTER(c_int), c_int, c_int, c_int
@@ -28,5 +28,15 @@ def call(data):
 def init():
     global dll
     if not dll:
-        dll = WinDLL('libGobangAI.dll')
+        dll = CDLL('libGobangAI.dll')
     dll.init()
+
+
+def get_win_rate():
+    global dll
+    if not dll:
+        dll = CDLL('libGobangAI.dll')
+    func = dll.getWinRate
+    func.restype = c_double
+    result = func()
+    return result

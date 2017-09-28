@@ -15,6 +15,7 @@ let board,
     playersWinner,
     draw,
     nowContent,
+    rateContent,
     recordP1Names,
     recordP1Scores,
     recordP2Names,
@@ -66,6 +67,7 @@ function init() {
     createChess()
     setName()
     resetData()
+    getWinRate()
 }
 
 function onRestart() {
@@ -93,6 +95,7 @@ function initElement() {
     playersWinner = [$('#p1-winner'), $('#p2-winner')]
     draw = $('#draw')
     nowContent = $('#now-content')
+    rateContent = $('#rate-content')
     recordP1Names = [$('#g1-p1-name'), $('#g2-p1-name'),
         $('#g3-p1-name'), $('#g4-p1-name'),
         $('#g5-p1-name')]
@@ -402,6 +405,7 @@ function callAI(level) {
         dataType: 'json',
         success: function (data) {
             putChess(data.index)
+            getWinRate()
         },
         error: function (xhr, type) {
             console.log(xhr)
@@ -415,6 +419,20 @@ function initAI() {
         url: '/init',
         success: function (data) {
             console.log(data)
+            getWinRate()
+        },
+        error: function (xhr, type) {
+            console.log(xhr)
+        }
+    })
+}
+
+function getWinRate() {
+    $.ajax({
+        type: 'POST',
+        url: '/rate',
+        success: function (data) {
+            rateContent.text(parseFloat(data.rate).toFixed(3) + "%")
         },
         error: function (xhr, type) {
             console.log(xhr)

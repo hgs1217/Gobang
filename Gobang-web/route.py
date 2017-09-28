@@ -4,7 +4,7 @@
 import json
 from flask import Blueprint, render_template, request, jsonify
 from config import VERSION
-from ai_manager import call, init
+from ai_manager import call, init, get_win_rate
 
 
 bp = Blueprint('Gobang', __name__, template_folder='templates')
@@ -33,3 +33,9 @@ def call_ai():
 def init_ai():
     init()
     return jsonify({'msg': 'success'}), 200
+
+
+@bp.route('/rate', methods=['POST'])
+def win_rate():
+    rate = get_win_rate()
+    return jsonify({'rate': rate}), 200
