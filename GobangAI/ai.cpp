@@ -509,6 +509,9 @@ DLLEXPORT void __cdecl init() {
     colArray.clear();
     diagRightUpArray.clear();
     diagRightDownArray.clear();
+    for (auto &od : orderIndexs) {
+        od.clear();
+    }
 }
 
 DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) {
