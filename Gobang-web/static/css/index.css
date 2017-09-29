@@ -1,6 +1,6 @@
 
 .container {
-    height: 600px;
+    height: 625px;
     width: 1000px;
 
     user-select: none;
@@ -101,4 +101,10 @@
     width: 200px;
 
     font: 25px 'Arial';
+}
+
+.rate-checkbox {
+    position: absolute;
+    top: 500px;
+    left: 400px;
 }

@@ -20,6 +20,7 @@ let board,
     recordP1Scores,
     recordP2Names,
     recordP2Scores,
+    showRate,
     playerTypes = [0, 0],
     playerNames = ['', ''],
     playerScores = [0, 0],
@@ -108,6 +109,11 @@ function initElement() {
         $('#g3-p2-score'), $('#g4-p2-score'),
         $('#g5-p2-score')]
     playerTypes = [parseInt($('#p1-type').text()), parseInt($('#p2-type').text())]
+
+    if ($('#show-rate').text() === 'false') {
+        $('#win-rate').attr('hidden', true)
+        $('#rate-content').attr('hidden', true)
+    }
 }
 
 function setName() {

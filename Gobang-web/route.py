@@ -6,7 +6,6 @@ from flask import Blueprint, render_template, request, jsonify
 from config import VERSION
 from ai_manager import call, init, get_win_rate
 
-
 bp = Blueprint('Gobang', __name__, template_folder='templates')
 
 
@@ -18,8 +17,9 @@ def index():
 @bp.route('/board', methods=['POST'])
 def board():
     init()
-    p1_type, p2_type = request.form.get('p1Type'), request.form.get('p2Type')
-    return render_template('board.html', p1_type=p1_type, p2_type=p2_type)
+    p1_type, p2_type, show_rate = request.form.get('p1Type'), request.form.get(
+        'p2Type'), request.form.get('showRate')
+    return render_template('board.html', p1_type=p1_type, p2_type=p2_type, show_rate=show_rate)
 
 
 @bp.route('/ai', methods=['POST'])

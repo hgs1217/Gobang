@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <cstring>
 #include <sstream>
 
 using namespace std;
@@ -32,8 +33,18 @@ int MAX_EXTEND = 2;
 int MAX_DEPTH = 8;
 double WIN_RATE = 50;
 
+struct ScoreMap {
+    int index;
+    int score;
+
+    ScoreMap() : index(-1), score(0) {};
+
+    ScoreMap(int i, int s) : index(i), score(s) {};
+};
+
 vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0);
 map<string, int> substitutionMap;
+map<string, vector<ScoreMap>> substitutionScoreMap;
 int currentBoardScore = 0, lastRound = -1;
 int positionValue[LINE_NUM * LINE_NUM] = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -51,15 +62,6 @@ int positionValue[LINE_NUM * LINE_NUM] = {
         0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0,
         0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-struct ScoreMap {
-    int index;
-    int score;
-
-    ScoreMap() : index(-1), score(0) {};
-
-    ScoreMap(int i, int s) : index(i), score(s) {};
 };
 
 bool sortScoreMapMin(ScoreMap scoreMap1, ScoreMap scoreMap2) {
@@ -337,21 +339,30 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
     memcpy(tmpStatus, boardStatus, LINE_NUM * LINE_NUM * sizeof(boardStatus[0]));
 
     vector<ScoreMap> scoreMapArray(0);
-    for (int i : newNullIndexSet) {
-        tmpStatus[i] = color;
-        int winStatus = judgeWin(tmpStatus);
-        if (winStatus != 0) {
-            return (INFI - depth) * (winStatus == originColor ? 1 : -1);
-        }
-        int newBoardScore = boardScore + calculateScoreChange(tmpStatus, originColor, i);
-        scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
-        tmpStatus[i] = 0;
-    }
 
-    if (color == originColor) {
-        sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
+    string key = constructKey(boardStatus, 0, color);
+    auto scoreIt = substitutionScoreMap.find(key);
+    if (scoreIt != substitutionScoreMap.end()) {
+        scoreMapArray = scoreIt->second;
     } else {
-        sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMin);
+        for (int i : newNullIndexSet) {
+            tmpStatus[i] = color;
+            int winStatus = judgeWin(tmpStatus), newBoardScore;
+            if (winStatus != 0) {
+                return (INFI - depth) * (winStatus == originColor ? 1 : -1);
+            }
+            newBoardScore = boardScore + calculateScoreChange(tmpStatus, originColor, i);
+            scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
+            tmpStatus[i] = 0;
+        }
+
+        if (color == originColor) {
+            sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
+        } else {
+            sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMin);
+        }
+
+        substitutionScoreMap[key] = scoreMapArray;
     }
 
     for (int i = 0; i < min((int) scoreMapArray.size(), filter); ++i) {
@@ -500,6 +511,7 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     default_random_engine eng;
     eng.seed((unsigned) time(nullptr));
     substitutionMap.clear();
+    substitutionScoreMap.clear();
 
     if (rowArray.empty()) {
         setDepth(level);
@@ -540,18 +552,25 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
 
     vector<ScoreMap> scoreMapArray(0), resultMapArray(0);
     vector<int> resultIndex(0);
-    for (int i : nullIndex) {
-        boardStatus[i] = color;
-        int winStatus = judgeWin(boardStatus);
-        if (winStatus == color) {
-            return i;
-        }
-        int newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i);
-        scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
-        boardStatus[i] = 0;
-    }
 
-    sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
+    string key = constructKey(boardStatus, 0, color);
+    auto scoreIt = substitutionScoreMap.find(key);
+    if (scoreIt != substitutionScoreMap.end()) {
+        scoreMapArray = scoreIt->second;
+    } else {
+        for (int i : nullIndex) {
+            boardStatus[i] = color;
+            int winStatus = judgeWin(boardStatus), newBoardScore;
+            if (winStatus == color) {
+                return i;
+            }
+            newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i);
+            scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
+            boardStatus[i] = 0;
+        }
+
+        sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
+    }
 
 //    cout << endl;
 //    for (auto map : scoreMapArray) {

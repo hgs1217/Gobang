@@ -29,6 +29,7 @@ function init() {
 function start(e) {
     $.post('/board', {
         'p1Type': $('#black-selection').find("option:selected").val(),
-        'p2Type': $('#white-selection').find("option:selected").val()
+        'p2Type': $('#white-selection').find("option:selected").val(),
+        'showRate': $('#rate-checkbox').get(0).checked
     })
 }
