@@ -26,9 +26,10 @@ const int SCORE_GAP_THREE = 40;
 const int SCORE_DEAD_FOUR = 50;
 const int SCORE_GAP_FOUR = 40;
 const int SCORE_GAP_FIVE = 40;
+const double SCORE_HISTORY_RATIO = 0.01;
 
+const int MAX_FILTER_SIZE = 15;
 const int FILTER_SIZE = 10;
-const int OUTER_FILTER_SIZE = 15;
 int MAX_EXTEND = 2;
 int MAX_DEPTH = 8;
 double WIN_RATE = 50;
@@ -42,10 +43,11 @@ struct ScoreMap {
     ScoreMap(int i, int s) : index(i), score(s) {};
 };
 
-vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0);
+vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0),
+        orderIndexs(LINE_NUM * LINE_NUM, vector<int>(0));
 map<string, int> substitutionMap;
 map<string, vector<ScoreMap>> substitutionScoreMap;
-int currentBoardScore = 0, lastRound = -1;
+int currentBoardScore = 0, lastRound = -1, currentRound = 1;
 int positionValue[LINE_NUM * LINE_NUM] = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -299,7 +301,7 @@ int judgeWin(const int boardStatus[]) {
 int minMax(int boardStatus[], const int &originColor, const int depth, const int &upperScore,
            const int &lastIndex, const int &boardScore, const set<int> &nullIndexSet) {
 
-    int tmp, lastTmp, score, color, index, filter = depth <= 1 ? OUTER_FILTER_SIZE : FILTER_SIZE;
+    int tmp, lastTmp, score, color, index, filter = depth <= 1 ? MAX_FILTER_SIZE : FILTER_SIZE;
 
     if (depth % 2 == 1) {
         score = INFI;
@@ -351,7 +353,8 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
             if (winStatus != 0) {
                 return (INFI - depth) * (winStatus == originColor ? 1 : -1);
             }
-            newBoardScore = boardScore + calculateScoreChange(tmpStatus, originColor, i);
+            newBoardScore = boardScore + calculateScoreChange(tmpStatus, originColor, i) +
+                            (int) (orderIndexs[currentRound + depth][i] * SCORE_HISTORY_RATIO);
             scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
             tmpStatus[i] = 0;
         }
@@ -376,6 +379,7 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         if (depth % 2 == 1) {
             if (downScore < upperScore) {
                 substitutionMap[constructKey(boardStatus, depth, color)] = downScore;
+                orderIndexs[currentRound + depth][index]++;
                 return downScore;
             } else {
                 if (downScore < score) {
@@ -385,6 +389,7 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         } else {
             if (downScore > upperScore) {
                 substitutionMap[constructKey(boardStatus, depth, color)] = downScore;
+                orderIndexs[currentRound + depth][index]++;
                 return downScore;
             } else {
                 if (downScore > score) {
@@ -459,6 +464,12 @@ void sliceBoard() {
         tmpUpArray.emplace_back(-1);
         diagRightUpArray.emplace_back(tmpUpArray);
     }
+
+    for (auto &od : orderIndexs) {
+        for (int i = 0; i < LINE_NUM * LINE_NUM; ++i) {
+            od.emplace_back(0);
+        }
+    }
 }
 
 void setDepth(int level) {
@@ -486,7 +497,7 @@ void setDepth(int level) {
 }
 
 void updateWinRate(double score) {
-    WIN_RATE = 100.0 / PI * atan(score / 100.0) + 50;
+    WIN_RATE = 100.0 / PI * atan((score + 6 + currentRound / 1.5) / 100.0) + 50;
 }
 
 DLLEXPORT double __cdecl getWinRate() {
@@ -512,6 +523,7 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     eng.seed((unsigned) time(nullptr));
     substitutionMap.clear();
     substitutionScoreMap.clear();
+    currentRound = round;
 
     if (rowArray.empty()) {
         setDepth(level);
@@ -564,7 +576,8 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
             if (winStatus == color) {
                 return i;
             }
-            newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i);
+            newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i) +
+                            (int) (orderIndexs[round][i] * SCORE_HISTORY_RATIO);
             scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
             boardStatus[i] = 0;
         }
@@ -577,7 +590,7 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
 //        cout << map.index << " " << map.score << endl;
 //    }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), OUTER_FILTER_SIZE); ++i) {
+    for (int i = 0; i < min((int) scoreMapArray.size(), MAX_FILTER_SIZE); ++i) {
         index = scoreMapArray[i].index;
         boardStatus[index] = color;
         int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
