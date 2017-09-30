@@ -2,4 +2,4 @@
 # @Create Date: 2017/9/17
 
 APP_NAME = 'Gobang'
-VERSION = 'v1.13'
+VERSION = 'v1.14'

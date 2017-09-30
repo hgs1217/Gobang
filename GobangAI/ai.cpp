@@ -8,6 +8,8 @@
 #include <map>
 #include <cstring>
 #include <sstream>
+#include <thread>
+#include <mutex>
 
 using namespace std;
 
@@ -28,6 +30,7 @@ const int SCORE_GAP_FOUR = 40;
 const int SCORE_GAP_FIVE = 40;
 const double SCORE_HISTORY_RATIO = 0.01;
 
+const int THREAD_NUM = 3;
 const int MAX_FILTER_SIZE = 15;
 const int FILTER_SIZE = 10;
 int MAX_EXTEND = 2;
@@ -47,7 +50,9 @@ vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDown
         orderIndexs(LINE_NUM * LINE_NUM, vector<int>(0));
 map<string, int> substitutionMap;
 map<string, vector<ScoreMap>> substitutionScoreMap;
+vector<ScoreMap> resultMapArray(0);
 int currentBoardScore = 0, lastRound = -1, currentRound = 1;
+mutex resultMutex;
 int positionValue[LINE_NUM * LINE_NUM] = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
@@ -472,6 +477,39 @@ void sliceBoard() {
     }
 }
 
+void threadFunc(const int statuses[], const vector<ScoreMap> &scoreMapArray, const set<int> &nullIndex) {
+
+    int index, color = currentRound % 2 == 1 ? 1 : -1, boardStatus[LINE_NUM * LINE_NUM], score = -INFI;
+    memcpy(boardStatus, statuses, LINE_NUM * LINE_NUM * sizeof(statuses[0]));
+
+    vector<ScoreMap> rmArray(0);
+
+    for (auto &sm : scoreMapArray) {
+        index = sm.index;
+        boardStatus[index] = color;
+        int s = minMax(boardStatus, color, 1, score, index, sm.score, nullIndex);
+//        cout << endl << index << " " << s << endl << endl;
+        if (currentRound <= 4) {
+            rmArray.emplace_back(ScoreMap(index, s));
+        } else {
+            if (s > score) {
+                score = s;
+                rmArray.clear();
+                rmArray.emplace_back(ScoreMap(index, s));
+            } else if (s == score) {
+                rmArray.emplace_back(ScoreMap(index, s));
+            }
+        }
+        boardStatus[index] = 0;
+    }
+
+    resultMutex.lock();
+    for (auto &scoreMap : rmArray) {
+        resultMapArray.emplace_back(scoreMap);
+    }
+    resultMutex.unlock();
+}
+
 void setDepth(int level) {
     switch (level) {
         case 1:
@@ -521,12 +559,13 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     memcpy(boardStatus, statuses, LINE_NUM * LINE_NUM * sizeof(statuses[0]));
 
     set<int> nullIndex;
-    int tmp, lastTmp, index, score = -INFI, color = round % 2 == 1 ? 1 : -1;
+    int tmp, lastTmp, index, result, score = -INFI, color = round % 2 == 1 ? 1 : -1;
 
     default_random_engine eng;
     eng.seed((unsigned) time(nullptr));
     substitutionMap.clear();
     substitutionScoreMap.clear();
+    resultMapArray.clear();
     currentRound = round;
 
     if (rowArray.empty()) {
@@ -566,54 +605,45 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
         return lastIndex + DIRECTIONS[eng() % 8];
     }
 
-    vector<ScoreMap> scoreMapArray(0), resultMapArray(0);
+    vector<ScoreMap> scoreMapArray(0);
     vector<int> resultIndex(0);
 
-    string key = constructKey(boardStatus, 0, color);
-    auto scoreIt = substitutionScoreMap.find(key);
-    if (scoreIt != substitutionScoreMap.end()) {
-        scoreMapArray = scoreIt->second;
-    } else {
-        for (int i : nullIndex) {
-            boardStatus[i] = color;
-            int winStatus = judgeWin(boardStatus), newBoardScore;
-            if (winStatus == color) {
-                return i;
-            }
-            newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i) +
-                            (int) (orderIndexs[round][i] * SCORE_HISTORY_RATIO);
-            scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
-            boardStatus[i] = 0;
+    for (int i : nullIndex) {
+        boardStatus[i] = color;
+        int winStatus = judgeWin(boardStatus), newBoardScore;
+        if (winStatus == color) {
+            return i;
         }
-
-        sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
+        newBoardScore = currentBoardScore + calculateScoreChange(boardStatus, color, i) +
+                        (int) (orderIndexs[round][i] * SCORE_HISTORY_RATIO);
+        scoreMapArray.emplace_back(ScoreMap(i, newBoardScore));
+        boardStatus[i] = 0;
     }
+
+    sort(scoreMapArray.begin(), scoreMapArray.end(), sortScoreMapMax);
 
 //    cout << endl;
 //    for (auto map : scoreMapArray) {
 //        cout << map.index << " " << map.score << endl;
 //    }
 
-    for (int i = 0; i < min((int) scoreMapArray.size(), MAX_FILTER_SIZE); ++i) {
-        index = scoreMapArray[i].index;
-        boardStatus[index] = color;
-        int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
-//        cout << endl << index << " " << s << endl << endl;
-        if (s > score) {
-            score = s;
-            resultIndex.clear();
-            resultIndex.emplace_back(index);
-        } else if (s == score) {
-            resultIndex.emplace_back(index);
-        }
-        if (round <= 4) {
-            resultMapArray.emplace_back(ScoreMap(index, s));
-        }
-        boardStatus[index] = 0;
-    }
-
-    int result;
     if (round <= 4) {
+        for (int i = 0; i < min((int) scoreMapArray.size(), MAX_FILTER_SIZE); ++i) {
+            index = scoreMapArray[i].index;
+            boardStatus[index] = color;
+            int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
+//            cout << endl << index << " " << s << endl << endl;
+            if (s > score) {
+                score = s;
+                resultIndex.clear();
+                resultIndex.emplace_back(index);
+            } else if (s == score) {
+                resultIndex.emplace_back(index);
+            }
+            resultMapArray.emplace_back(ScoreMap(index, s));
+            boardStatus[index] = 0;
+        }
+
         sort(resultMapArray.begin(), resultMapArray.end(), sortScoreMapMax);
         ScoreMap sm;
         if (round == 3) {
@@ -625,6 +655,28 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
         updateWinRate(sm.score);
         setDepth(level);
     } else {
+        vector<vector<ScoreMap>> smArrays(0);
+        for (int i=0; i<THREAD_NUM; ++i) {
+            vector<ScoreMap> smArray(scoreMapArray.begin() + i * MAX_FILTER_SIZE / THREAD_NUM,
+                                     scoreMapArray.begin() + (i + 1) * MAX_FILTER_SIZE / THREAD_NUM);
+            smArrays.emplace_back(smArray);
+        }
+        thread th0(threadFunc, boardStatus, smArrays[0], nullIndex);
+        thread th1(threadFunc, boardStatus, smArrays[1], nullIndex);
+        thread th2(threadFunc, boardStatus, smArrays[2], nullIndex);
+        th0.join();
+        th1.join();
+        th2.join();
+
+        sort(resultMapArray.begin(), resultMapArray.end(), sortScoreMapMax);
+        score = resultMapArray[0].score;
+        for (auto &sm : resultMapArray) {
+            if (sm.score == score) {
+                resultIndex.emplace_back(sm.index);
+            } else {
+                break;
+            }
+        }
         result = resultIndex[eng() % resultIndex.size()];
         updateWinRate(score);
     }
@@ -632,5 +684,6 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     boardStatus[result] = color;
     currentBoardScore += calculateScoreChange(boardStatus, color, result);
     lastRound = round;
+    cout << result << endl;
     return result;
 }
