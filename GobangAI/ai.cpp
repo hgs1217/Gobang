@@ -509,6 +509,7 @@ DLLEXPORT void __cdecl init() {
     colArray.clear();
     diagRightUpArray.clear();
     diagRightDownArray.clear();
+    currentBoardScore = 0;
     for (auto &od : orderIndexs) {
         od.clear();
     }
