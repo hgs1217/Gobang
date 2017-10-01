@@ -48,8 +48,6 @@ struct ScoreMap {
 
 vector<vector<int>> rowArray(0), colArray(0), diagRightUpArray(0), diagRightDownArray(0),
         orderIndexs(LINE_NUM * LINE_NUM, vector<int>(0));
-map<string, int> substitutionMap;
-map<string, vector<ScoreMap>> substitutionScoreMap;
 vector<ScoreMap> resultMapArray(0);
 int currentBoardScore = 0, lastRound = -1, currentRound = 1;
 mutex resultMutex;
@@ -304,7 +302,8 @@ int judgeWin(const int boardStatus[]) {
 }
 
 int minMax(int boardStatus[], const int &originColor, const int depth, const int &upperScore,
-           const int &lastIndex, const int &boardScore, const set<int> &nullIndexSet) {
+           const int &lastIndex, const int &boardScore, const set<int> &nullIndexSet,
+           map<string, int> &substitutionMap, map<string, vector<ScoreMap>> &substitutionScoreMap) {
 
     int tmp, lastTmp, score, color, index, filter = depth <= 1 ? MAX_FILTER_SIZE : FILTER_SIZE;
 
@@ -377,14 +376,16 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         index = scoreMapArray[i].index;
         tmpStatus[index] = color;
         int downScore = minMax(tmpStatus, originColor, depth + 1, score, index, scoreMapArray[i].score,
-                               newNullIndexSet);
+                               newNullIndexSet, substitutionMap, substitutionScoreMap);
 //        if (depth == 1) {
 //            cout << index << " " << downScore << endl;
 //        }
         if (depth % 2 == 1) {
             if (downScore < upperScore) {
                 substitutionMap[constructKey(boardStatus, depth, color)] = downScore;
+                resultMutex.lock();
                 orderIndexs[currentRound + depth][index]++;
+                resultMutex.unlock();
                 return downScore;
             } else {
                 if (downScore < score) {
@@ -394,7 +395,9 @@ int minMax(int boardStatus[], const int &originColor, const int depth, const int
         } else {
             if (downScore > upperScore) {
                 substitutionMap[constructKey(boardStatus, depth, color)] = downScore;
+                resultMutex.lock();
                 orderIndexs[currentRound + depth][index]++;
+                resultMutex.unlock();
                 return downScore;
             } else {
                 if (downScore > score) {
@@ -483,11 +486,13 @@ void threadFunc(const int statuses[], const vector<ScoreMap> &scoreMapArray, con
     memcpy(boardStatus, statuses, LINE_NUM * LINE_NUM * sizeof(statuses[0]));
 
     vector<ScoreMap> rmArray(0);
+    map<string, int> substitutionMap;
+    map<string, vector<ScoreMap>> substitutionScoreMap;
 
     for (auto &sm : scoreMapArray) {
         index = sm.index;
         boardStatus[index] = color;
-        int s = minMax(boardStatus, color, 1, score, index, sm.score, nullIndex);
+        int s = minMax(boardStatus, color, 1, score, index, sm.score, nullIndex, substitutionMap, substitutionScoreMap);
 //        cout << endl << index << " " << s << endl << endl;
         if (currentRound <= 4) {
             rmArray.emplace_back(ScoreMap(index, s));
@@ -563,8 +568,6 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
 
     default_random_engine eng;
     eng.seed((unsigned) time(nullptr));
-    substitutionMap.clear();
-    substitutionScoreMap.clear();
     resultMapArray.clear();
     currentRound = round;
 
@@ -631,7 +634,10 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
         for (int i = 0; i < min((int) scoreMapArray.size(), MAX_FILTER_SIZE); ++i) {
             index = scoreMapArray[i].index;
             boardStatus[index] = color;
-            int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex);
+            map<string, int> substitutionMap;
+            map<string, vector<ScoreMap>> substitutionScoreMap;
+            int s = minMax(boardStatus, color, 1, score, index, scoreMapArray[i].score, nullIndex,
+                            substitutionMap, substitutionScoreMap);
 //            cout << endl << index << " " << s << endl << endl;
             if (s > score) {
                 score = s;
@@ -649,7 +655,7 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
         if (round == 3) {
             sm = resultMapArray[eng() % 8];
         } else {
-            sm = resultMapArray[eng() % 5];
+            sm = resultMapArray[eng() % 3];
         }
         result = sm.index;
         updateWinRate(sm.score);
@@ -657,8 +663,10 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     } else {
         vector<vector<ScoreMap>> smArrays(0);
         for (int i=0; i<THREAD_NUM; ++i) {
-            vector<ScoreMap> smArray(scoreMapArray.begin() + i * MAX_FILTER_SIZE / THREAD_NUM,
-                                     scoreMapArray.begin() + (i + 1) * MAX_FILTER_SIZE / THREAD_NUM);
+            vector<ScoreMap> smArray(0);
+            for (int j = 0; j < MAX_FILTER_SIZE / THREAD_NUM; ++j) {
+                smArray.emplace_back(scoreMapArray[j * THREAD_NUM + i]);
+            }
             smArrays.emplace_back(smArray);
         }
         thread th0(threadFunc, boardStatus, smArrays[0], nullIndex);
@@ -684,6 +692,5 @@ DLLEXPORT int __cdecl call(int statuses[], int round, int lastIndex, int level) 
     boardStatus[result] = color;
     currentBoardScore += calculateScoreChange(boardStatus, color, result);
     lastRound = round;
-    cout << result << endl;
     return result;
 }
